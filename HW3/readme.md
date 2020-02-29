@@ -21,3 +21,11 @@ piece means the number of player, since we have two player, player1 and 2 <br>
 
 confusing about evaluation since passing parameters are confusing now...
 
+## Resources:
+this is chess:<br>
+https://github.com/AchintyaAshok/Connect4-AI-Final-Project
+
+this is HW last yeat:<br>
+https://github.com/caiespin/Connect4_Alpha-beta_Expectimax_Search_AI
+
+
