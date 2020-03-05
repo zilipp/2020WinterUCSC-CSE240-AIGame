@@ -182,6 +182,7 @@ class AIPlayer:
 
         if maximizingPlayer:
             value = -math.inf
+            column = valid_locations[0]
             for col in valid_locations:
                 row = self.get_drop_row(board, col)
                 b_copy = copy.deepcopy(board)
@@ -197,6 +198,7 @@ class AIPlayer:
 
         else:  # Minimizing player
             value = math.inf
+            column = valid_locations[0]
             for col in valid_locations:
                 row = self.get_drop_row(board, col)
                 b_copy = copy.deepcopy(board)
@@ -231,51 +233,46 @@ class AIPlayer:
         RETURNS:
         The 0 based index of the column that represents the next move
         """
-
+        print("alpha_beta")
         piece = self.player_number
         col, minimax_score = self.minimax(board, piece, 3, -math.inf, math.inf, True)  # 3 is depth
         return col
 
-    # todo: no implementation yet, similar to minimax
-    def expectiminimax(self, board, piece, depth, node):
-        # opp_piece = 1
-        # if piece == 1:
-        #     opp_piece = 2
-        # valid_locations = self.get_valid_locations(board)
-        # is_terminal = self.is_terminal_node(board)
-        # if depth == 0 or is_terminal:
-        #     if is_terminal:
-        #         if self.winning_move(board, piece):
-        #             return (None, 100000000000000)
-        #         elif self.winning_move(board, opp_piece):
-        #             return (None, -10000000000000)
-        #         else: # Game is over, no more valid moves
-        #             return (None, 0)
-        #     else: # Depth is zero
-        #         return (None, self.evaluation_function(board, piece))
-        #
-        # if node:#ourmove
-        #     alpha = -math.inf
-        #     column = random.choice(valid_locations)
-        #     for col in valid_locations:
-        #         row = self.get_next_open_row(board, col)
-        #         b_copy = board.copy()
-        #         self.drop_piece(b_copy, row, col, piece)
-        #         new_score = self.expectiminimax(b_copy, piece, depth-1, False)[1]
-        #         if new_score > alpha:
-        #             alpha = new_score
-        #             column = col
-        #
-        # else: #random node
-        #     alpha = 0
-        #     column = random.choice(valid_locations)
-        #     for col in valid_locations:
-        #         row = self.get_next_open_row(board, col)
-        #         b_copy = board.copy()
-        #         self.drop_piece(b_copy, row, col, piece)
-        #         alpha = alpha + ((1.0/7.0) * self.expectiminimax(b_copy, opp_piece, depth-1, True)[1])
-        # return column, alpha
-        return 0, 0
+    '''
+    expectiminimax is the basic algorithm of expectimax,
+    '''
+    def expectiminimax(self, board, number, depth, node):
+        # default: number is 2
+        opp_number = 1
+        if number == 1:
+            opp_number = 2
+
+        valid_locations = self.get_possible_moves(board)
+        is_ended = self.game_completed(board, number)
+        if depth == 0 or is_ended:
+            return None, self.evaluation_function(board)
+
+        if node: # our move
+            alpha = -math.inf
+            column = valid_locations[0]
+            for col in valid_locations:
+                row = self.get_drop_row(board, col)
+                b_copy = copy.deepcopy(board)
+                self.drop_piece(b_copy, row, col, number)
+                new_score = self.expectiminimax(b_copy, number, depth - 1, False)[1]
+                if new_score > alpha:
+                    alpha = new_score
+                    column = col
+
+        else:  # random node
+            alpha = 0
+            column = valid_locations[0]
+            for col in valid_locations:
+                row = self.get_drop_row(board, col)
+                b_copy = copy.deepcopy(board)
+                self.drop_piece(b_copy, row, col, number)
+                alpha = alpha + ((1.0/7.0) * self.expectiminimax(b_copy, opp_number, depth - 1, True)[1])
+        return column, alpha
 
     '''required API'''
     def get_expectimax_move(self, board):
@@ -299,10 +296,10 @@ class AIPlayer:
         RETURNS:
         The 0 based index of the column that represents the next move
         """
+        print("expectimax")
         piece = self.player_number
-        col, minimax_score = self.expectiminimax(board, piece, 3, True)
+        col, score = self.expectiminimax(board, piece, 2, True)
         return col
-
 
 
 class RandomPlayer:
