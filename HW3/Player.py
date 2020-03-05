@@ -11,7 +11,7 @@ class AIPlayer:
         self.player_string = 'Player {}:ai'.format(player_number)
 
     '''find possible children, return cols that can put pieces'''
-    def getAllPossibleMoves(self, board):
+    def get_possible_moves(self, board):
         moves = []
         # priority in middle
         cols = [3, 2, 4, 1, 5, 0, 6]
@@ -23,7 +23,7 @@ class AIPlayer:
         return moves
 
     '''if drop, return row to be dropped in'''
-    def get_next_open_row(self, board, col):
+    def get_drop_row(self, board, col):
         for r in range(5, -1, -1): # 5 to 0, -1 not contains
             if board[r][col] == 0:
                 return r
@@ -69,7 +69,6 @@ class AIPlayer:
 
     '''to check consecutive pieces, i.e. consecutive 2, 3, return how many consecutives exists'''
     def check(self, board, player_num, check_count):
-        org = ''
         player_win_str_partial = '{0}'.format(player_num)
         player_win_str = str()
         for i in range(0, check_count):
@@ -169,25 +168,25 @@ class AIPlayer:
     since it only have two more parameters: alpha, beta
     param: maximizingPlayer: to max = true, to min = false
     '''
-    def minimax(self, board, piece, depth, alpha, beta, maximizingPlayer):
-        opp_piece = 1
-        if piece == 1:
-            opp_piece = 2
+    def minimax(self, board, number, depth, alpha, beta, maximizingPlayer):
+        # default: piece is palyer 2;
+        opp_number = 1
+        if number == 1:
+            opp_number = 2
 
-        valid_locations = self.getAllPossibleMoves(board)
+        valid_locations = self.get_possible_moves(board)
 
-        is_terminal = self.game_completed(board, piece)
-        if depth == 0 or is_terminal:
+        is_completed = self.game_completed(board, number)
+        if depth == 0 or is_completed:
             return None, self.evaluation_function(board)
 
         if maximizingPlayer:
             value = -math.inf
-            column = random.choice(valid_locations)
             for col in valid_locations:
-                row = self.get_next_open_row(board, col)
+                row = self.get_drop_row(board, col)
                 b_copy = copy.deepcopy(board)
-                self.drop_piece(b_copy, row, col, piece)
-                new_score = self.minimax(b_copy, piece, depth-1, alpha, beta, False)[1]
+                self.drop_piece(b_copy, row, col, number)
+                new_score = self.minimax(b_copy, number, depth - 1, alpha, beta, False)[1]
                 if new_score > value:
                     value = new_score
                     column = col
@@ -196,14 +195,13 @@ class AIPlayer:
                     break
             return column, value
 
-        else: # Minimizing player
+        else:  # Minimizing player
             value = math.inf
-            column = random.choice(valid_locations)
             for col in valid_locations:
-                row = self.get_next_open_row(board, col)
+                row = self.get_drop_row(board, col)
                 b_copy = copy.deepcopy(board)
-                self.drop_piece(b_copy, row, col, opp_piece)
-                new_score = self.minimax(b_copy, opp_piece, depth-1, alpha, beta, True)[1]
+                self.drop_piece(b_copy, row, col, opp_number)
+                new_score = self.minimax(b_copy, opp_number, depth - 1, alpha, beta, True)[1]
                 if new_score < value:
                     value = new_score
                     column = col
@@ -235,8 +233,7 @@ class AIPlayer:
         """
 
         piece = self.player_number
-        col, minimax_score = self.minimax(board, piece, 3, -math.inf, math.inf, True) # 3 is depth
-        print('alpha-beta\n')
+        col, minimax_score = self.minimax(board, piece, 3, -math.inf, math.inf, True)  # 3 is depth
         return col
 
     # todo: no implementation yet, similar to minimax
@@ -304,7 +301,6 @@ class AIPlayer:
         """
         piece = self.player_number
         col, minimax_score = self.expectiminimax(board, piece, 3, True)
-        print('expectiminimax\n')
         return col
 
 
