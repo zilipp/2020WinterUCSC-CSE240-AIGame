@@ -7,30 +7,23 @@ import random
 class AIPlayer:
     def __init__(self, player_number):
         self.player_number = player_number
+        self.opponent_number = 2 if player_number == 1 else 1
         self.type = 'ai'
         self.player_string = 'Player {}:ai'.format(player_number)
 
     '''find possible children, return cols that can put pieces'''
     def get_possible_moves(self, board):
-        moves = []
         # priority in middle
-        cols = [3, 2, 4, 1, 5, 0, 6]
-        for x in cols:
-            for y in range(board.shape[0]):
-                if board[y, x] == 0:
-                    moves.append(x)
-                    y = board.shape[0]
-        return moves
-
-    '''if drop, return row to be dropped in'''
-    def get_drop_row(self, board, col):
-        for r in range(5, -1, -1): # 5 to 0, -1 not contains
-            if board[r][col] == 0:
-                return r
+        cols = np.array([0, 1, 2, 3, 4, 5, 6])
+        return cols[board[0] == 0]
 
     '''drop piece to the board'''
-    def drop_piece(self, board, row, col, piece):
-        board[row][col] = piece
+    def drop_piece(self, board, column, piece):
+        for row in range(5, -1, -1):
+            if board[row][column] == 0:
+                board[row][column] = piece
+                return
+        assert False
 
     '''to check if the game complete'''
     def game_completed(self, board, player_num):
@@ -168,49 +161,48 @@ class AIPlayer:
     since it only have two more parameters: alpha, beta
     param: maximizingPlayer: to max = true, to min = false
     '''
-    def minimax(self, board, number, depth, alpha, beta, maximizingPlayer):
-        # default: piece is palyer 2;
-        opp_number = 1
-        if number == 1:
-            opp_number = 2
-
-        valid_locations = self.get_possible_moves(board)
-
-        is_completed = self.game_completed(board, number)
-        if depth == 0 or is_completed:
+    def minimax(self, board, depth, alpha, beta, maximizing_player):
+        valid_locations = self.get_possible_moves(board).tolist()
+        if depth == 0 or len(valid_locations) == 0 or self.game_completed(board, self.player_number):
             return None, self.evaluation_function(board)
 
-        if maximizingPlayer:
-            value = -math.inf
+        random.shuffle(valid_locations)
+
+        if maximizing_player:
+            best = -math.inf
             column = valid_locations[0]
-            for col in valid_locations:
-                row = self.get_drop_row(board, col)
-                b_copy = copy.deepcopy(board)
-                self.drop_piece(b_copy, row, col, number)
-                new_score = self.minimax(b_copy, number, depth - 1, alpha, beta, False)[1]
-                if new_score > value:
-                    value = new_score
-                    column = col
-                alpha = max(alpha, value)
+            for column_tmp in valid_locations:
+                board_tmp = copy.deepcopy(board)
+                self.drop_piece(board_tmp, column_tmp, self.player_number)
+                _, score = self.minimax(board_tmp, depth - 1, alpha, beta, False)
+                best = max(best, score)
+                if best > alpha:
+                    alpha = best
+                    column = column_tmp
+
+                # Alpha Beta Pruning
                 if alpha >= beta:
                     break
-            return column, value
+
+            return column, score
 
         else:  # Minimizing player
-            value = math.inf
             column = valid_locations[0]
-            for col in valid_locations:
-                row = self.get_drop_row(board, col)
-                b_copy = copy.deepcopy(board)
-                self.drop_piece(b_copy, row, col, opp_number)
-                new_score = self.minimax(b_copy, opp_number, depth - 1, alpha, beta, True)[1]
-                if new_score < value:
-                    value = new_score
-                    column = col
-                beta = min(beta, value)
+            best = math.inf
+            for column_tmp in valid_locations:
+                board_tmp = copy.deepcopy(board)
+                self.drop_piece(board_tmp, column_tmp, self.opponent_number)
+                _, score = self.minimax(board_tmp, depth - 1, alpha, beta, True)
+                best = min(best, score)
+                if best < beta:
+                    beta = best
+                    column = column_tmp
+
+                # Alpha Beta Pruning
                 if alpha >= beta:
                     break
-            return column, value
+
+            return column, score
 
     '''required API'''
     def get_alpha_beta_move(self, board):
@@ -234,8 +226,7 @@ class AIPlayer:
         The 0 based index of the column that represents the next move
         """
         print("alpha_beta")
-        piece = self.player_number
-        col, minimax_score = self.minimax(board, piece, 3, -math.inf, math.inf, True)  # 3 is depth
+        col, _ = self.minimax(board, 3, -math.inf, math.inf, True)  # 3 is depth
         return col
 
     '''

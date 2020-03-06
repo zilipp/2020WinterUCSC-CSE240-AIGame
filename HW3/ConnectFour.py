@@ -136,10 +136,9 @@ class Game:
                 check_diagonal(board))
 
 
-
 def main(player1, player2, time):
     """
-    Creates player objects based on the string paramters that are passed
+    Creates player objects based on the string parameters that are passed
     to it and calls play_game()
 
     INPUTS:
@@ -147,11 +146,11 @@ def main(player1, player2, time):
     player2 - a string ['ai', 'random', 'human']
     """
     def make_player(name, num):
-        if name=='ai':
+        if name == 'ai':
             return AIPlayer(num)
-        elif name=='random':
+        elif name == 'random':
             return RandomPlayer(num)
-        elif name=='human':
+        elif name == 'human':
             return HumanPlayer(num)
 
     Game(make_player(player1, 1), make_player(player2, 2), time)
