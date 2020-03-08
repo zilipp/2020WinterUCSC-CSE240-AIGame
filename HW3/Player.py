@@ -3,6 +3,11 @@ import random
 import math
 from datetime import datetime
 
+# credit to:
+# https://github.com/AchintyaAshok/Connect4-AI-Final-Project
+# https://github.com/caiespin/Connect4_Alpha-beta_Expectimax_Search_AI
+# https://github.com/KeithGalli/Connect4-Python
+
 
 class AIPlayer:
     def __init__(self, player_number):
@@ -10,22 +15,22 @@ class AIPlayer:
         self.type = 'ai'
         self.player_string = 'Player {}:ai'.format(player_number)
 
-    def drop_piece(self, board, row, col, piece):
-        board[row][col] = piece
-
-    def get_next_open_row(self, board, col):
-        for r in range(5, -1, -1):
-            if board[r][col] == 0:
-                return r
-
-    def get_valid_locations(self, board):
+    def find_valid_columns(self, board):
         valid_cols = []
         for col in range(board.shape[1]):
             if board[0, col] == 0:
                 valid_cols.append(col)
         return valid_cols
 
-    def winning_move(self, board, piece):
+    def find_row_to_drop(self, board, col):
+        for r in range(5, -1, -1):
+            if board[r][col] == 0:
+                return r
+
+    def drop_piece(self, board, row, col, piece):
+        board[row][col] = piece
+
+    def check_win(self, board, piece):
         # Check horizontal locations for win
         for c in range(7 - 3):
             for r in range(5):
@@ -54,35 +59,38 @@ class AIPlayer:
                         board[r - 3][c + 3] == piece:
                     return True
 
-    def is_terminal_node(self, board):
+    def game_completed(self, board):
         valid_cols = []
         for col in range(board.shape[1]):
             if 0 in board[:, col]:
                 valid_cols.append(col)
-        return self.winning_move(board, 1) or self.winning_move(board, 2) or len(valid_cols) == 0
+        return self.check_win(board, 1) or self.check_win(board, 2) or len(valid_cols) == 0
 
-    def evaluate_window(self, window, piece):
+    def sliding_window(self, window, piece):
         score = 0
         opp_piece = 1
         if piece == 1:
             opp_piece = 2
 
-        if window.count(piece) == 4 and window.count(0) == 0:
+        count_piece = window.count(piece)
+        count_other_piece = window.count(opp_piece)
+        count_zero = window.count(0)
+        if count_piece == 4 and count_zero == 0:
             score += 10000000
-        elif window.count(piece) == 3 and window.count(0) == 1:
+        elif count_piece == 3 and count_zero == 1:
             score += 50
-        elif window.count(piece) == 2 and window.count(0) == 2:
+        elif count_piece == 2 and count_zero == 2:
             score += 20
-        elif window.count(piece) == 1 and window.count(0) == 3:
+        elif count_piece == 1 and count_zero == 3:
             score += 5
 
-        if window.count(opp_piece) == 4 and window.count(0) == 0:
+        if count_other_piece == 4 and count_zero == 0:
             score -= 10000000
-        elif window.count(opp_piece) == 3 and window.count(0) == 1:
+        elif count_other_piece == 3 and count_zero == 1:
             score -= 50
-        elif window.count(opp_piece) == 2 and window.count(0) == 2:
+        elif count_other_piece == 2 and count_zero == 2:
             score -= 20
-        elif window.count(opp_piece) == 1 and window.count(0) == 3:
+        elif count_other_piece == 1 and count_zero == 3:
             score -= 5
 
         return score
@@ -105,46 +113,46 @@ class AIPlayer:
         RETURNS:
         The utility value for the current board
         """
-        is_terminal = self.is_terminal_node(board)
+        is_terminal = self.game_completed(board)
         if is_terminal:
-            if self.winning_move(board, self.player_number):
+            if self.check_win(board, self.player_number):
                 return math.inf
-            elif self.winning_move(board, 3 - self.player_number):
+            elif self.check_win(board, 3 - self.player_number):
                 return -math.inf
-            else:  # Game is over, no more valid moves
+            else:
                 return 0
 
         score = 0
 
-        ## Score center column
+        # center col
         center_array = [int(i) for i in list(board[:, 3])]
         center_count = center_array.count(self.player_number)
         score += center_count * 30
 
-        ## Score Horizontal
+        # horizontal
         for r in range(6):
             row_array = [int(i) for i in list(board[r, :])]
             for c in range(7 - 3):
                 window = row_array[c:c + 4]
-                score += self.evaluate_window(window, self.player_number)
+                score += self.sliding_window(window, self.player_number)
 
-        ## Score Vertical
+        # vertical
         for c in range(7):
             col_array = [int(i) for i in list(board[:, c])]
             for r in range(6 - 3):
                 window = col_array[r:r + 4]
-                score += self.evaluate_window(window, self.player_number)
+                score += self.sliding_window(window, self.player_number)
 
-        ## Score posiive sloped diagonal
+        # diagonal
         for r in range(6 - 3):
             for c in range(7 - 3):
                 window = [board[r + i][c + i] for i in range(4)]
-                score += self.evaluate_window(window, self.player_number)
+                score += self.sliding_window(window, self.player_number)
 
         for r in range(6 - 3):
             for c in range(7 - 3):
                 window = [board[r + 3 - i][c + i] for i in range(4)]
-                score += self.evaluate_window(window, self.player_number)
+                score += self.sliding_window(window, self.player_number)
 
         return score
 
@@ -152,13 +160,13 @@ class AIPlayer:
         opp_piece = 1
         if piece == 1:
             opp_piece = 2
-        valid_locations = self.get_valid_locations(board)
-        is_terminal = self.is_terminal_node(board)
+        valid_locations = self.find_valid_columns(board)
+        is_terminal = self.game_completed(board)
         if depth == 0 or is_terminal:
             if is_terminal:
-                if self.winning_move(board, self.player_number):
+                if self.check_win(board, self.player_number):
                     return None, math.inf
-                elif self.winning_move(board, 3 - self.player_number):
+                elif self.check_win(board, 3 - self.player_number):
                     return None, -math.inf
                 else:  # Game is over, no more valid moves
                     return None, 0
@@ -168,7 +176,7 @@ class AIPlayer:
             value = -math.inf
             column = valid_locations[0]
             for col in valid_locations:
-                row = self.get_next_open_row(board, col)
+                row = self.find_row_to_drop(board, col)
                 b_copy = board.copy()
                 self.drop_piece(b_copy, row, col, piece)
                 new_score = self.minimax(b_copy, opp_piece, depth - 1, alpha, beta, False)[1]
@@ -184,7 +192,7 @@ class AIPlayer:
             value = math.inf
             column = valid_locations[0]
             for col in valid_locations:
-                row = self.get_next_open_row(board, col)
+                row = self.find_row_to_drop(board, col)
                 b_copy = board.copy()
                 self.drop_piece(b_copy, row, col, piece)
                 new_score = self.minimax(b_copy, opp_piece, depth - 1, alpha, beta, True)[1]
@@ -197,43 +205,43 @@ class AIPlayer:
             return column, value
 
     def expecti_minimax(self, board, piece, depth, maximizingPlayer):
-        opp_piece = 1
+        other_piece = 1
         if piece == 1:
-            opp_piece = 2
-        valid_locations = self.get_valid_locations(board)
-        is_terminal = self.is_terminal_node(board)
+            other_piece = 2
+        valid_locations = self.find_valid_columns(board)
+        is_terminal = self.game_completed(board)
         if depth == 0 or is_terminal:
             if is_terminal:
-                if self.winning_move(board, self.player_number):
+                if self.check_win(board, self.player_number):
                     return None, math.inf
-                elif self.winning_move(board, 3 - self.player_number):
+                elif self.check_win(board, 3 - self.player_number):
                     return None, -math.inf
-                else:  # Game is over, no more valid moves
+                else:
                     return None, 0
-            else:  # Depth is zero
+            else:
                 return None, self.evaluation_function(board)
 
-        if maximizingPlayer:  # ourmove
-            alpha = -math.inf
+        if maximizingPlayer:  # maximizing
+            value = -math.inf
             column = valid_locations[0]
             for col in valid_locations:
-                row = self.get_next_open_row(board, col)
+                row = self.find_row_to_drop(board, col)
                 b_copy = board.copy()
                 self.drop_piece(b_copy, row, col, piece)
-                new_score = self.expecti_minimax(b_copy, opp_piece, depth - 1, False)[1]
-                if new_score > alpha:
-                    alpha = new_score
+                new_score = self.expecti_minimax(b_copy, other_piece, depth - 1, False)[1]
+                if new_score > value:
+                    value = new_score
                     column = col
 
-        else:  # random node
-            alpha = 0
+        else:  # chance node
+            value = 0
             column = valid_locations[0]
             for col in valid_locations:
-                row = self.get_next_open_row(board, col)
+                row = self.find_row_to_drop(board, col)
                 b_copy = board.copy()
                 self.drop_piece(b_copy, row, col, piece)
-                alpha += self.expecti_minimax(b_copy, opp_piece, depth - 1, True)[1] / 7
-        return column, alpha
+                value += self.expecti_minimax(b_copy, other_piece, depth - 1, True)[1] / 7
+        return column, value
 
     def get_alpha_beta_move(self, board):
         """
@@ -255,13 +263,11 @@ class AIPlayer:
         RETURNS:
         The 0 based index of the column that represents the next move
         """
-        before = datetime.now()
-
+        # before = datetime.now()
         piece = self.player_number
         col, minimax_score = self.minimax(board, piece, 4, -math.inf, math.inf, True)
-
-        after = datetime.now()
-        print("alpha-beta time: {0}".format(after - before))
+        # after = datetime.now()
+        # print("alpha-beta time: {0}".format(after - before))
         return col
 
     def get_expectimax_move(self, board):
@@ -285,9 +291,11 @@ class AIPlayer:
         RETURNS:
         The 0 based index of the column that represents the next move
         """
+        # before = datetime.now()
         piece = self.player_number
         col, score = self.expecti_minimax(board, piece, 4, True)
-        print('expectiminimax\n')
+        # after = datetime.now()
+        # print("alpha-beta time: {0}".format(after - before))
         return col
 
 
@@ -360,7 +368,7 @@ class HumanPlayer:
 
         return move
 
-# main function is for debug
+# main function is for debugging
 # if __name__ == '__main__':
 #     board = np.array([[1, 0, 0, 0, 0, 0, 0],
 #                       [1, 0, 0, 0, 0, 0, 0],
