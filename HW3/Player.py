@@ -123,44 +123,43 @@ class AIPlayer:
             else:
                 return 0
 
-        score = 0
-
-        # center col
-        center_array = [int(i) for i in list(board[:, 3])]
-        center_count = center_array.count(self.player_number)
-        score += center_count * 30
+        res = 0
+        # vertical
+        for c in range(7):
+            col_array = [int(i) for i in list(board[:, c])]
+            for r in range(3):
+                window = col_array[r:r + 4]
+                res += self.sliding_window(window, self.player_number)
 
         # horizontal
         for r in range(6):
             row_array = [int(i) for i in list(board[r, :])]
-            for c in range(7 - 3):
+            for c in range(4):
                 window = row_array[c:c + 4]
-                score += self.sliding_window(window, self.player_number)
+                res += self.sliding_window(window, self.player_number)
 
-        # vertical
-        for c in range(7):
-            col_array = [int(i) for i in list(board[:, c])]
-            for r in range(6 - 3):
-                window = col_array[r:r + 4]
-                score += self.sliding_window(window, self.player_number)
-
-        # diagonal
-        for r in range(6 - 3):
-            for c in range(7 - 3):
+        # main_diagonal
+        for r in range(3):
+            for c in range(4):
                 window = [board[r + i][c + i] for i in range(4)]
-                score += self.sliding_window(window, self.player_number)
+                res += self.sliding_window(window, self.player_number)
 
-        for r in range(6 - 3):
-            for c in range(7 - 3):
+        # off_diagonal
+        for r in range(3):
+            for c in range(4):
                 window = [board[r + 3 - i][c + i] for i in range(4)]
-                score += self.sliding_window(window, self.player_number)
+                res += self.sliding_window(window, self.player_number)
 
-        return score
+        # center columns
+        center_array = [int(i) for i in list(board[:, 3])]
+        center_count = center_array.count(self.player_number)
+        res += center_count * 30
+        return res
 
     def alpha_beta_help(self, board, piece, depth, alpha, beta, maximizingPlayer):
-        opp_piece = 1
+        other_piece = 1
         if piece == 1:
-            opp_piece = 2
+            other_piece = 2
         valid_locations = self.find_valid_columns(board)
         is_terminal = self.game_completed(board)
         if depth == 0 or is_terminal:
@@ -181,7 +180,7 @@ class AIPlayer:
                 row = self.find_row_to_drop(board, col)
                 b_copy = board.copy()
                 self.drop_piece(b_copy, row, col, piece)
-                new_score = self.alpha_beta_help(b_copy, opp_piece, depth - 1, alpha, beta, False)[1]
+                new_score = self.alpha_beta_help(b_copy, other_piece, depth - 1, alpha, beta, False)[1]
                 if new_score > value:
                     value = new_score
                     column = col
@@ -196,7 +195,7 @@ class AIPlayer:
                 row = self.find_row_to_drop(board, col)
                 b_copy = board.copy()
                 self.drop_piece(b_copy, row, col, piece)
-                new_score = self.alpha_beta_help(b_copy, opp_piece, depth - 1, alpha, beta, True)[1]
+                new_score = self.alpha_beta_help(b_copy, other_piece, depth - 1, alpha, beta, True)[1]
                 if new_score < value:
                     value = new_score
                     column = col

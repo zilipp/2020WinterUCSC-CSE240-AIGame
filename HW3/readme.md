@@ -1,4 +1,4 @@
-# three required API
+# three required API in AIPlayer
 
 ## def evaluation_function(self, board)
 
