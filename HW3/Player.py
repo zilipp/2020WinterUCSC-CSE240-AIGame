@@ -3,6 +3,7 @@ import random
 import math
 from datetime import datetime
 
+
 # credit to:
 # https://github.com/AchintyaAshok/Connect4-AI-Final-Project
 # https://github.com/caiespin/Connect4_Alpha-beta_Expectimax_Search_AI
@@ -32,7 +33,7 @@ class AIPlayer:
 
     def check_win(self, board, piece):
         # Check horizontal locations for win
-        for c in range(7 - 3):
+        for c in range(4):
             for r in range(5):
                 if board[r][c] == piece and board[r][c + 1] == piece and board[r][c + 2] == piece and board[r][
                     c + 3] == piece:
@@ -40,20 +41,20 @@ class AIPlayer:
 
         # Check vertical locations for win
         for c in range(7):
-            for r in range(6 - 3):
+            for r in range(3):
                 if board[r][c] == piece and board[r + 1][c] == piece and board[r + 2][c] == piece and board[r + 3][
                     c] == piece:
                     return True
 
         # Check positively sloped diaganols
-        for c in range(7 - 3):
-            for r in range(6 - 3):
+        for c in range(4):
+            for r in range(3):
                 if board[r][c] == piece and board[r + 1][c + 1] == piece and board[r + 2][c + 2] == piece and \
                         board[r + 3][c + 3] == piece:
                     return True
 
         # Check negatively sloped diaganols
-        for c in range(7 - 3):
+        for c in range(4):
             for r in range(3, 5):
                 if board[r][c] == piece and board[r - 1][c + 1] == piece and board[r - 2][c + 2] == piece and \
                         board[r - 3][c + 3] == piece:
@@ -68,12 +69,12 @@ class AIPlayer:
 
     def sliding_window(self, window, piece):
         score = 0
-        opp_piece = 1
+        other_piece = 1
         if piece == 1:
-            opp_piece = 2
+            other_piece = 2
 
         count_piece = window.count(piece)
-        count_other_piece = window.count(opp_piece)
+        count_other_piece = window.count(other_piece)
         count_zero = window.count(0)
         if count_piece == 4 and count_zero == 0:
             score += 10000000
@@ -113,8 +114,8 @@ class AIPlayer:
         RETURNS:
         The utility value for the current board
         """
-        is_terminal = self.game_completed(board)
-        if is_terminal:
+        ended = self.game_completed(board)
+        if ended:
             if self.check_win(board, self.player_number):
                 return math.inf
             elif self.check_win(board, 3 - self.player_number):
@@ -156,7 +157,7 @@ class AIPlayer:
 
         return score
 
-    def minimax(self, board, piece, depth, alpha, beta, maximizingPlayer):
+    def alpha_beta_help(self, board, piece, depth, alpha, beta, maximizingPlayer):
         opp_piece = 1
         if piece == 1:
             opp_piece = 2
@@ -168,10 +169,11 @@ class AIPlayer:
                     return None, math.inf
                 elif self.check_win(board, 3 - self.player_number):
                     return None, -math.inf
-                else:  # Game is over, no more valid moves
+                else:
                     return None, 0
-            else:  # Depth is zero
+            else:
                 return None, self.evaluation_function(board)
+
         if maximizingPlayer:
             value = -math.inf
             column = valid_locations[0]
@@ -179,7 +181,7 @@ class AIPlayer:
                 row = self.find_row_to_drop(board, col)
                 b_copy = board.copy()
                 self.drop_piece(b_copy, row, col, piece)
-                new_score = self.minimax(b_copy, opp_piece, depth - 1, alpha, beta, False)[1]
+                new_score = self.alpha_beta_help(b_copy, opp_piece, depth - 1, alpha, beta, False)[1]
                 if new_score > value:
                     value = new_score
                     column = col
@@ -187,15 +189,14 @@ class AIPlayer:
                 if alpha >= beta:
                     break
             return column, value
-
-        else:  # Minimizing player
+        else:
             value = math.inf
             column = valid_locations[0]
             for col in valid_locations:
                 row = self.find_row_to_drop(board, col)
                 b_copy = board.copy()
                 self.drop_piece(b_copy, row, col, piece)
-                new_score = self.minimax(b_copy, opp_piece, depth - 1, alpha, beta, True)[1]
+                new_score = self.alpha_beta_help(b_copy, opp_piece, depth - 1, alpha, beta, True)[1]
                 if new_score < value:
                     value = new_score
                     column = col
@@ -204,7 +205,7 @@ class AIPlayer:
                     break
             return column, value
 
-    def expecti_minimax(self, board, piece, depth, maximizingPlayer):
+    def expectimax_help(self, board, piece, depth, maximizingPlayer):
         other_piece = 1
         if piece == 1:
             other_piece = 2
@@ -228,7 +229,7 @@ class AIPlayer:
                 row = self.find_row_to_drop(board, col)
                 b_copy = board.copy()
                 self.drop_piece(b_copy, row, col, piece)
-                new_score = self.expecti_minimax(b_copy, other_piece, depth - 1, False)[1]
+                new_score = self.expectimax_help(b_copy, other_piece, depth - 1, False)[1]
                 if new_score > value:
                     value = new_score
                     column = col
@@ -240,7 +241,7 @@ class AIPlayer:
                 row = self.find_row_to_drop(board, col)
                 b_copy = board.copy()
                 self.drop_piece(b_copy, row, col, piece)
-                value += self.expecti_minimax(b_copy, other_piece, depth - 1, True)[1] / 7
+                value += self.expectimax_help(b_copy, other_piece, depth - 1, True)[1] / 7
         return column, value
 
     def get_alpha_beta_move(self, board):
@@ -265,7 +266,7 @@ class AIPlayer:
         """
         # before = datetime.now()
         piece = self.player_number
-        col, minimax_score = self.minimax(board, piece, 4, -math.inf, math.inf, True)
+        col, minimax_score = self.alpha_beta_help(board, piece, 4, -math.inf, math.inf, True)
         # after = datetime.now()
         # print("alpha-beta time: {0}".format(after - before))
         return col
@@ -293,7 +294,7 @@ class AIPlayer:
         """
         # before = datetime.now()
         piece = self.player_number
-        col, score = self.expecti_minimax(board, piece, 4, True)
+        col, score = self.expectimax_help(board, piece, 4, True)
         # after = datetime.now()
         # print("alpha-beta time: {0}".format(after - before))
         return col
@@ -368,7 +369,7 @@ class HumanPlayer:
 
         return move
 
-# main function is for debugging
+# #main function is for debugging
 # if __name__ == '__main__':
 #     board = np.array([[1, 0, 0, 0, 0, 0, 0],
 #                       [1, 0, 0, 0, 0, 0, 0],
