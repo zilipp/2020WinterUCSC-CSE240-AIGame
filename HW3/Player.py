@@ -13,9 +13,6 @@ class AIPlayer:
     def drop_piece(self, board, row, col, piece):
         board[row][col] = piece
 
-    # def is_valid_location(self, board, col):
-    #     return board[5-1][col] == 0
-
     def get_next_open_row(self, board, col):
         for r in range(5, -1, -1):
             if board[r][col] == 0:
@@ -71,7 +68,7 @@ class AIPlayer:
             opp_piece = 2
 
         if window.count(piece) == 4 and window.count(0) == 0:
-            score += 10000
+            score += 10000000
         elif window.count(piece) == 3 and window.count(0) == 1:
             score += 50
         elif window.count(piece) == 2 and window.count(0) == 2:
@@ -80,7 +77,7 @@ class AIPlayer:
             score += 5
 
         if window.count(opp_piece) == 4 and window.count(0) == 0:
-            score -= 10000
+            score -= 10000000
         elif window.count(opp_piece) == 3 and window.count(0) == 1:
             score -= 50
         elif window.count(opp_piece) == 2 and window.count(0) == 2:
@@ -199,7 +196,7 @@ class AIPlayer:
                     break
             return column, value
 
-    def expectiminimax(self, board, piece, depth, node):
+    def expecti_minimax(self, board, piece, depth, maximizingPlayer):
         opp_piece = 1
         if piece == 1:
             opp_piece = 2
@@ -207,35 +204,35 @@ class AIPlayer:
         is_terminal = self.is_terminal_node(board)
         if depth == 0 or is_terminal:
             if is_terminal:
-                if self.winning_move(board, piece):
-                    return (None, 100000000000000)
-                elif self.winning_move(board, opp_piece):
-                    return (None, -10000000000000)
+                if self.winning_move(board, self.player_number):
+                    return None, math.inf
+                elif self.winning_move(board, 3 - self.player_number):
+                    return None, -math.inf
                 else:  # Game is over, no more valid moves
-                    return (None, 0)
+                    return None, 0
             else:  # Depth is zero
-                return (None, self.evaluation_function(board, piece))
+                return None, self.evaluation_function(board)
 
-        if node:  # ourmove
+        if maximizingPlayer:  # ourmove
             alpha = -math.inf
-            column = random.choice(valid_locations)
+            column = valid_locations[0]
             for col in valid_locations:
                 row = self.get_next_open_row(board, col)
                 b_copy = board.copy()
                 self.drop_piece(b_copy, row, col, piece)
-                new_score = self.expectiminimax(b_copy, piece, depth - 1, False)[1]
+                new_score = self.expecti_minimax(b_copy, opp_piece, depth - 1, False)[1]
                 if new_score > alpha:
                     alpha = new_score
                     column = col
 
         else:  # random node
             alpha = 0
-            column = random.choice(valid_locations)
+            column = valid_locations[0]
             for col in valid_locations:
                 row = self.get_next_open_row(board, col)
                 b_copy = board.copy()
                 self.drop_piece(b_copy, row, col, piece)
-                alpha = alpha + ((1.0 / 7.0) * self.expectiminimax(b_copy, opp_piece, depth - 1, True)[1])
+                alpha += self.expecti_minimax(b_copy, opp_piece, depth - 1, True)[1] / 7
         return column, alpha
 
     def get_alpha_beta_move(self, board):
@@ -258,10 +255,13 @@ class AIPlayer:
         RETURNS:
         The 0 based index of the column that represents the next move
         """
+        before = datetime.now()
 
         piece = self.player_number
         col, minimax_score = self.minimax(board, piece, 4, -math.inf, math.inf, True)
-        print('alpha-beta\n')
+
+        after = datetime.now()
+        print("alpha-beta time: {0}".format(after - before))
         return col
 
     def get_expectimax_move(self, board):
@@ -286,7 +286,7 @@ class AIPlayer:
         The 0 based index of the column that represents the next move
         """
         piece = self.player_number
-        col, minimax_score = self.expectiminimax(board, piece, 3, True)
+        col, score = self.expecti_minimax(board, piece, 4, True)
         print('expectiminimax\n')
         return col
 
@@ -360,24 +360,24 @@ class HumanPlayer:
 
         return move
 
-
-if __name__ == '__main__':
-    board = np.array([[0, 0, 0, 0, 0, 0, 0],
-                      [0, 0, 1, 1, 0, 0, 0],
-                      [0, 0, 1, 1, 0, 0, 0],
-                      [0, 2, 1, 2, 0, 0, 0],
-                      [2, 1, 2, 1, 0, 0, 0],
-                      [2, 2, 2, 1, 2, 0, 0]])
-
-    ai_player = AIPlayer(1)
-    eval = ai_player.evaluation_function(board)
-    print(eval)
-
-    now = datetime.now()
-    print("time: {0}".format(now))
-
-    col = ai_player.get_alpha_beta_move(board)
-    print("col: {0}".format(col))
-
-    now = datetime.now()
-    print("time: {0}".format(now))
+# main function is for debug
+# if __name__ == '__main__':
+#     board = np.array([[1, 0, 0, 0, 0, 0, 0],
+#                       [1, 0, 0, 0, 0, 0, 0],
+#                       [2, 0, 0, 2, 0, 0, 0],
+#                       [1, 0, 0, 1, 0, 0, 0],
+#                       [1, 1, 1, 1, 0, 0, 0],
+#                       [1, 2, 2, 1, 2, 2, 2]])
+#
+#     ai_player = AIPlayer(1)
+#     eval = ai_player.evaluation_function(board)
+#     print(eval)
+#
+#     now = datetime.now()
+#     print("time: {0}".format(now))
+#
+#     col = ai_player.get_expectimax_move(board)
+#     print("col: {0}".format(col))
+#
+#     now = datetime.now()
+#     print("time: {0}".format(now))
